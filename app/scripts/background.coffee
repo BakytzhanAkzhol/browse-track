@@ -3,18 +3,33 @@
 chrome.runtime.onInstalled.addListener (details) ->
   console.log('previousVersion', details.previousVersion)
 
+chrome.browserAction.setBadgeText({text: 'Hello, World'})
 Stat =
   data: {}
   cur: null
 
+lastTime=0
+previousData=false
 tabChanged = (url) ->
   if Stat.cur
     lst = Stat.data[Stat.cur]
     lst.push(new Date())
   Stat.cur = url
+  urlfind = url+''
+  urlfind = urlfind.replace(/[^a-zA-Z]/g, '').substring(10, urlfind.length / 2).toLowerCase();
   lst = Stat.data[url] or []
   lst.push(new Date())
   Stat.data[url] = lst
+  chrome.storage.local.get ('value') , (data)->
+    data=data.value
+    size=data.length
+    for i in [0..size]
+      kl = data[i].key
+      if kl == urlfind 
+        lastTime =  data[i].value
+      else 
+        previousData=true
+      console.log "And the is result #{lastTime} #{kl} = > #{urlfind}"
 
 calc = (url)->
   lst = Stat.data[url]
@@ -27,17 +42,36 @@ calc = (url)->
       res += lst[2 * i + 1].getTime() - lst[2 * i].getTime()
   res += (new Date()).getTime() - lst[lst.length - 1].getTime()
   return res
-
 updateBadge = (url)->
-  res = calc url
-  key=Stat.cur
-  key = key.replace(/[^a-zA-Z]/g,'').toLowerCase()
-  key=key.substring(10, key.length/2 )
-  console.log key;
+  res = if previousData == true then lastTime else calc url
+  previousData=false
+  urlfind= Stat.cur
+  urlfind=urlfind.replace(/[^a-zA-Z]/g, '').substring(10, urlfind.length / 2).toLowerCase();
   lastTime=res+'';
-  many=['key':key, 'value':lastTime]
-  chrome.storage.local.set ({'value':many }) 
   result='Olla'
+
+  chrome.storage.local.get ('value') , (result)->
+    if typeof(result) == 'object' && !Object.keys(result).length
+      many=['key':urlfind, 'value':lastTime]
+      chrome.storage.local.set ({'value':many })
+      return
+    many=result.value
+    size=many.length
+    find=false
+    for i in [0..size]
+      kl = many[i].key
+      console.log " #{kl} === #{urlfind} #{find}"
+      if kl == urlfind 
+         many[i].key=urlfind
+         many[i].value=lastTime
+         find = true
+         console.log many
+         chrome.storage.local.set ({'value':many }) 
+         break
+    if find == false
+      many[size]=['key':urlfind, 'value':lastTime]
+      chrome.storage.local.set ({'value':many }) 
+    return
 
   mm = res % 60
   hh = res // (3600*60000)
