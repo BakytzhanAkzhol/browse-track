@@ -58,20 +58,20 @@ updateBadge = (url)->
     many=result.value
     size=many.length
     find=false
+    console.log "Length of array #{size}\n"
     for i in [0..size]
       kl = many[i].key
-      console.log " #{kl} === #{urlfind} #{find}"
-      if kl == urlfind 
+      vl = many[i].value
+      if kl is urlfind 
          many[i].key=urlfind
          many[i].value=lastTime
-         find = true
-         console.log many
+         console.log "#{i}=current:\n#{urlfind}\n [Key:#{kl} Time:#{vl}]"
          chrome.storage.local.set ({'value':many }) 
-         break
+         return
     if find == false
       many[size]=['key':urlfind, 'value':lastTime]
       chrome.storage.local.set ({'value':many }) 
-    return
+      return
 
   mm = res % 60
   hh = res // (3600*60000)
